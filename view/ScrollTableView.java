@@ -5,8 +5,15 @@ import android.content.res.TypedArray;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AbsListView;
+import android.widget.AdapterView;
+import android.widget.BaseAdapter;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import com.viciy.scrolltableview.R;
 
@@ -27,6 +34,9 @@ public class ScrollTableView extends RelativeLayout {
     private SingleLineTextView mHeadNameCode;
     private LinearLayout mHeadAttributeContainer;
     private Mode mode = Mode.noMove;
+    private ListView mListView;
+    private OnScrollStateChangeListener mScrollStateChangeListener;
+    private ActionListener mActionListener;
 
     private enum Mode {
         verticalMove, horizontalMove, noMove
@@ -62,8 +72,130 @@ public class ScrollTableView extends RelativeLayout {
         mHead.setClickable(true);
         mHead.setOnTouchListener(new ListViewAndHeadViewTouchLinstener(true));
 
+        mListView = (ListView) findViewById(R.id.scroll_table_view_body);
+        mListView.setOnTouchListener(new ListViewAndHeadViewTouchLinstener(false));
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                if (mode == Mode.noMove) {
+                    if (mActionListener != null) {
+                        mActionListener.onItemClick(i);
+                    }
+                }
+            }
+        });
+        mListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
+                if (mode == Mode.noMove) {
+                    if (mActionListener != null) {
+                        mActionListener.onItemLongClick(i, view);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+        mListView.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(AbsListView view, int scrollState) {
+                if (mScrollStateChangeListener != null) {
+                    mScrollStateChangeListener.onScrollStateChanged(view, scrollState);
+                }
+            }
 
+            @Override
+            public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
 
+            }
+        });
+    }
+
+    /**
+     * ScrollTableView的监听接口
+     */
+    public interface ActionListener {
+
+        void onItemLongClick(int position, View view);
+
+        void onItemClick(int position);
+    }
+
+    public interface OnScrollStateChangeListener {
+        public void onScrollStateChanged(AbsListView view, int scrollState);
+    }
+
+    public void setScrollStateChangeListener(OnScrollStateChangeListener mScrollStateChangeListener) {
+        this.mScrollStateChangeListener = mScrollStateChangeListener;
+    }
+
+    public void setActionListener(ActionListener mActionListener) {
+        this.mActionListener = mActionListener;
+    }
+
+    public void resetHeadItemWidth(float scale, int... ids) {
+        if (mHead == null) {
+            return;
+        }
+        for (int id : ids) {
+            try {
+                View view = mHead.findViewById(id);
+                ViewGroup.LayoutParams params = view.getLayoutParams();
+                params.width = (int) (params.width * scale);
+                view.setLayoutParams(params);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void setHeadClickListener(OnClickListener listener, int... ids) {
+        if (mHead == null) {
+            return;
+        }
+        for (int id : ids) {
+            try {
+                View view = mHead.findViewById(id);
+                view.setOnClickListener(listener);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void setHeadItemValue(int id, String value) {
+        if (mHead != null) {
+            View view = mHead.findViewById(id);
+            ((TextView) view).setText(value);
+        }
+    }
+
+    public void setHeadItemTvColor(int id, int color) {
+        if (mHead != null) {
+            View view = mHead.findViewById(id);
+            ((TextView) view).setTextColor(color);
+        }
+    }
+
+    public void setHeadItemImage(int id, int res) {
+        if (mHead != null) {
+            ImageView view = (ImageView) mHead.findViewById(id);
+            view.setImageResource(res);
+        }
+    }
+
+    public int getFirstVisiblePosition() {
+        return mListView.getFirstVisiblePosition();
+    }
+
+    public int getLastVisiblePosition() {
+        return mListView.getLastVisiblePosition();
+    }
+
+    public void setAdapter(BaseAdapter adapter) {
+        if (mListView != null) {
+            mListView.setAdapter(adapter);
+        }
     }
 
     class ListViewAndHeadViewTouchLinstener implements OnTouchListener {
